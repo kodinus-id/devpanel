@@ -1,17 +1,17 @@
 #!/bin/bash
 
 # Reset all configurations of the DevPanel program.
-# This function will reset all configurations of the webserver, dnsmasq, MySQL, PostgreSQL, and Redis.
+# This function will reset all configurations of the webserver, hosts file, MySQL, PostgreSQL, and Redis.
 # It will ask for confirmation before starting the reset process.
 # The reset process includes:
 #   1. Removing all webserver configurations (nginx)
-#   2. Resetting dnsmasq to its default configuration
+#   2. Menghapus entri hosts yang dikelola DevPanel
 #   3. Dropping all MySQL databases
 #   4. Dropping all PostgreSQL databases
 #   5. Flushing all Redis databases
 reset_all() {
   log_action "INFO" "Resetting all configurations"
-  dialog --yesno "⚠️ PERINGATAN ⚠️\n\nIni akan menghapus SEMUA konfigurasi project, reset DNSMasq, dan menghapus semua database (MySQL, PostgreSQL, Redis).\n\nLANJUTKAN?" 15 60 || return
+  dialog --yesno "⚠️ PERINGATAN ⚠️\n\nIni akan menghapus SEMUA konfigurasi project, entri hosts, dan semua database (MySQL, PostgreSQL, Redis).\n\nLANJUTKAN?" 15 60 || return
 
   dialog --infobox "Mereset semua konfigurasi..." 5 40
 
@@ -22,11 +22,8 @@ reset_all() {
   rm -f "$SITEDB"/*.site
   sudo nginx -t 2>/dev/null && sudo systemctl reload nginx
 
-  # 2. Reset dnsmasq
-  if [[ -n "$DNSMASQ_DEV_CONF" ]]; then
-    sudo rm -f "$DNSMASQ_DEV_CONF"
-    sudo systemctl restart dnsmasq
-  fi
+  # 2. Reset hosts entries
+  sudo sed -i "/$HOSTS_SECTION_START/,/$HOSTS_SECTION_END/d" "$HOSTS_FILE"
 
   # 3. Reset MySQL
   DBS=$(mysql -u root -p -e "SHOW DATABASES;" 2>/dev/null | grep -Ev "(Database|mysql|information_schema|performance_schema|sys)")
@@ -43,7 +40,7 @@ reset_all() {
   # 5. Reset Redis
   redis-cli FLUSHALL >/dev/null 2>&1
 
-  show_msg "Reset Selesai" "Semua konfigurasi webserver, dnsmasq, dan database berhasil direset."
+    show_msg "Reset Selesai" "Semua konfigurasi webserver, hosts, dan database berhasil direset."
 }
 
 # Quick status check
@@ -200,7 +197,7 @@ BACKUP_INFO
 # Menampilkan informasi tentang sistem yang sedang berjalan,
 # termasuk status layanan, jumlah situs web yang diaktifkan,
 # sumber daya sistem, direktori konfigurasi, dan informasi
-# tentang layanan dnsmasq.
+# tentang file hosts.
 show_system_info() {
   log_action "INFO" "Showing system info"
   # Check service status dengan fallback yang lebih baik
@@ -253,13 +250,14 @@ show_system_info() {
   STATUS_INFO+="- Nginx Sites: /etc/nginx/sites-available/\n"
   STATUS_INFO+="- SSL Certs: /etc/ssl/local-dev/\n"
   
-  STATUS_INFO+="\nDNSMasq:\n"
-  if systemctl is-active dnsmasq >/dev/null 2>&1; then
-    STATUS_INFO+="- dnsmasq: Aktif\n"
+
+  STATUS_INFO+="\nHosts File:\n"
+  if grep -q "$HOSTS_SECTION_START" "$HOSTS_FILE" 2>/dev/null; then
+    STATUS_INFO+="- Entri DevPanel: Ada\n"
   else
-    STATUS_INFO+="- dnsmasq: Tidak Aktif\n"
+    STATUS_INFO+="- Entri DevPanel: Tidak Ada\n"
   fi
-  STATUS_INFO+="- Config: $DNSMASQ_DEV_CONF\n"
+  STATUS_INFO+="- File: $HOSTS_FILE\n"
   
   show_msg "System Info" "$STATUS_INFO"
 }

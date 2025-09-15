@@ -131,7 +131,7 @@ META
   # Test dan reload nginx
   if sudo nginx -t 2>/dev/null; then
     sudo systemctl reload nginx
-    update_dnsmasq_config
+    update_hosts_file
     show_msg "Berhasil" "Proyek $domains ($site_type) berhasil ditambahkan.\nID: $id"
   else
     # Rollback jika error
@@ -358,6 +358,7 @@ delete_project() {
   
   if sudo nginx -t 2>/dev/null; then
     sudo systemctl reload nginx
+    update_hosts_file
     show_msg "Berhasil" "Proyek $DOMAIN berhasil dihapus."
   else
     show_msg "Error" "Ada masalah dengan konfigurasi nginx setelah penghapusan."
@@ -419,6 +420,7 @@ META
   
   if sudo nginx -t 2>/dev/null; then
     sudo systemctl reload nginx
+    update_hosts_file
     show_msg "Berhasil" "Proyek $DOMAIN berhasil $action."
   else
     show_msg "Error" "Ada masalah dengan konfigurasi nginx."

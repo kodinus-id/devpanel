@@ -3,7 +3,9 @@
 DEVPANEL_DIR="$HOME/.devpanel"
 SITEDB="$DEVPANEL_DIR/sites"
 LOGFILE="$DEVPANEL_DIR/panel-data.log"
-DNSMASQ_DEV_CONF="/etc/dnsmasq.d/devpanel.conf"
+HOSTS_FILE="/etc/hosts"
+HOSTS_SECTION_START="# DevPanel managed domains"
+HOSTS_SECTION_END="# End DevPanel managed domains"
 
 mkdir -p "$SITEDB"
 

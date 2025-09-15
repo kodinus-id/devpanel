@@ -64,7 +64,7 @@ manage_services() {
 get_service_names() {
   log_action "INFO" "Fetching service names"
   # Definisi layanan yang akan dikelola
-  services=("nginx" "mysql" "redis-server" "postgresql" "dnsmasq")
+  services=("nginx" "mysql" "redis-server" "postgresql")
   
   # Check alternatif nama service untuk kompatibilitas distro
   available_services=()

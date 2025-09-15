@@ -7,7 +7,7 @@
 #   3. Manajemen MySQL
 #   4. Manajemen Redis
 #   5. Manajemen PostgreSQL
-#   6. Manajemen dnsmasq
+#   6. Manajemen Hosts File
 #   7. Informasi Sistem
 #   8. Aksi Cepat
 #   9. Atur Ulang Semua Konfigurasi
@@ -21,7 +21,7 @@ main_menu() {
       3 "Manajemen MySQL" \
       4 "Manajemen Redis" \
       5 "Manajemen PostgreSQL" \
-      6 "Manajemen dnsmasq" \
+        6 "Manajemen Hosts" \
       7 "Informasi Sistem" \
       8 "Aksi Cepat" \
       9 "Atur Ulang Semua Konfigurasi" \
@@ -36,7 +36,7 @@ main_menu() {
       3) manage_mysql ;;
       4) manage_redis ;;
       5) manage_postgres ;;
-      6) manage_dnsmasq ;;   # <== ini tambahan
+        6) manage_hosts ;;   # <== ini tambahan
       7) show_system_info ;;
       8) quick_actions ;;
       9) reset_all ;;
