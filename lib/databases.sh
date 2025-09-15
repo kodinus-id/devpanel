@@ -17,9 +17,23 @@ manage_mysql() {
 
     case $CHOICE in
       1)
-        DBS=$(mysql -u root -p -e "SHOW DATABASES;" 2>/dev/null)
-        USERS=$(mysql -u root -p -e "SELECT User, Host FROM mysql.user;" 2>/dev/null)
+        pass=$(dialog --passwordbox "Password root MySQL:" 10 50 3>&1 1>&2 2>&3) || continue
+        DBS=$(mysql -u root -p"$pass" -N -B -e "SHOW DATABASES;" 2>/dev/null)
+        USERS=$(mysql -u root -p"$pass" -N -B -e "SELECT User, Host FROM mysql.user;" 2>/dev/null)
         show_msg "Daftar MySQL" "Databases:\n$DBS\n\nUsers:\n$USERS"
+
+        mapfile -t DB_ARRAY <<< "$DBS"
+        if [[ ${#DB_ARRAY[@]} -gt 0 ]]; then
+          DB_MENU=()
+          for db in "${DB_ARRAY[@]}"; do
+            DB_MENU+=("$db" "")
+          done
+          db=$(dialog --menu "Pilih Database untuk melihat tabel:" 20 60 10 "${DB_MENU[@]}" 3>&1 1>&2 2>&3) || continue
+          TABLES=$(mysql -u root -p"$pass" -N -B -e "USE \`$db\`; SHOW TABLES;" 2>/dev/null)
+          show_msg "Tabel MySQL" "Database: $db\nTables:\n${TABLES:-Tidak ada tabel}" 
+        else
+          show_msg "Error" "Gagal mengambil daftar database."
+        fi
         ;;
       2)
         db=$(dialog --inputbox "Nama Database:" 10 50 3>&1 1>&2 2>&3) || continue
@@ -127,9 +141,23 @@ manage_postgres() {
 
     case $CHOICE in
       1)
-        DBS=$(sudo -u postgres psql -c "\l" 2>/dev/null)
-        USERS=$(sudo -u postgres psql -c "\du" 2>/dev/null)
+        pass=$(dialog --passwordbox "Password user postgres:" 10 50 3>&1 1>&2 2>&3) || continue
+        DBS=$(PGPASSWORD="$pass" psql -U postgres -At -c "SELECT datname FROM pg_database WHERE datistemplate = false;" 2>/dev/null)
+        USERS=$(PGPASSWORD="$pass" psql -U postgres -At -c "\\du" 2>/dev/null)
         show_msg "Daftar PostgreSQL" "Databases:\n$DBS\n\nUsers:\n$USERS"
+
+        mapfile -t DB_ARRAY <<< "$DBS"
+        if [[ ${#DB_ARRAY[@]} -gt 0 ]]; then
+          DB_MENU=()
+          for db in "${DB_ARRAY[@]}"; do
+            DB_MENU+=("$db" "")
+          done
+          db=$(dialog --menu "Pilih Database untuk melihat tabel:" 20 60 10 "${DB_MENU[@]}" 3>&1 1>&2 2>&3) || continue
+          TABLES=$(PGPASSWORD="$pass" psql -U postgres -d "$db" -At -c "SELECT tablename FROM pg_tables WHERE schemaname='public';" 2>/dev/null)
+          show_msg "Tabel PostgreSQL" "Database: $db\nTables:\n${TABLES:-Tidak ada tabel}" 
+        else
+          show_msg "Error" "Gagal mengambil daftar database."
+        fi
         ;;
       2) 
         db=$(dialog --inputbox "Nama Database:" 10 50 3>&1 1>&2 2>&3) || continue
