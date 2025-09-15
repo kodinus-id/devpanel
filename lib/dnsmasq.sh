@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Manage dnsmasq service
+#
+# This function opens a menu for managing the dnsmasq service.
+# The menu options are:
+#   1. Status dnsmasq
+#   2. Start dnsmasq
+#   3. Stop dnsmasq
+#   4. Restart dnsmasq
+#   5. Edit Konfigurasi
+#   6. Lihat Log
+#   0. Kembali
 manage_dnsmasq() {
   log_action "INFO" "Open dnsmasq management menu"
   while true; do
@@ -73,6 +84,12 @@ manage_dnsmasq() {
   done
 }
 
+# Update dnsmasq config to add all enabled project domains
+# 
+# This function regenerates the dnsmasq config file to include all enabled
+# project domains. It iterates over all enabled projects, and for each
+# project, adds all its domains to the config file. Finally, it restarts
+# dnsmasq to apply the new config.
 update_dnsmasq_config() {
   log_action "INFO" "Updating dnsmasq config"
   # Regenerasi konfigurasi dnsmasq untuk semua proyek enabled

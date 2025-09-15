@@ -9,17 +9,41 @@ mkdir -p "$SITEDB"
 
 hash_id() { echo -n "$1" | md5sum | awk '{print $1}'; }
 
+# Log an action to the logfile
+#
+# Parameters:
+#   $1 - The log level (e.g. "INFO", "ERROR")
+#   $2 - The log message
+#
+# Log format:
+#   [YYYY-MM-DD HH:MM:SS] [LEVEL] MESSAGE
 log_action() {
   local level="$1"
   local message="$2"
   printf "[%s] [%s] %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$level" "$message" >> "$LOGFILE"
 }
 
+# Show a message to the user and log the action
+#
+# Parameters:
+#   $1 - The title of the message box
+#   $2 - The message to display
+#
+# Returns:
+#   None
 show_msg() {
   dialog --title "$1" --msgbox "$2" 20 70
   log_action "INFO" "$1 - $2"
 }
 
+# Check if all dependencies are installed
+#
+# If any dependencies are missing, print error message
+# and exit with code 1
+#
+# Parameters: None
+#
+# Returns: None
 check_dependencies() {
   log_action "INFO" "Checking dependencies"
   missing_deps=()
@@ -41,6 +65,15 @@ check_dependencies() {
   fi
 }
 
+# Exit the DevPanel program
+#
+# This function will clear the screen, display a goodbye message, and exit the program with code 0.
+#
+# Parameters:
+#   None
+#
+# Returns:
+#   None
 exit_panel() {
   clear
   echo "[DevPanel] Berhasil memberhentikan layanan."

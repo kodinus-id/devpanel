@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# Manage webserver configuration
+# This function provides a menu for managing webserver configuration.
+# It will ask for the root password, and then provide options to list
+# projects, add a new project, edit an existing project, delete a project,
+# enable SSL, and toggle the status of a project.
+# The menu options are:
+#   1. Daftar Proyek
+#   2. Tambah Proyek
+#   3. Edit Proyek
+#   4. Hapus Proyek
+#   5. Enable SSL
+#   6. Toggle Status
+#   0. Kembali
 manage_webserver() {
   log_action "INFO" "Open webserver management"
   while true; do
@@ -39,6 +52,8 @@ manage_webserver() {
   done
 }
 
+# List all projects with their status, domain, type, root, and SSL status
+# Format: [STATUS] DOMAIN | TYPE | ROOT | SSL
 list_projects() {
   log_action "INFO" "Listing projects"
   RESULT="FORMAT: [STATUS] DOMAIN | TYPE | ROOT | SSL\n"
@@ -76,6 +91,9 @@ list_projects() {
   show_msg "Daftar Proyek" "$RESULT"
 }
 
+# Membuat proyek baru dengan menginputkan domain, root path, dan tipe website.
+# Format: add_project()
+# Contoh: add_project()
 add_project() {
   log_action "INFO" "Adding project"
   # Input domain
@@ -123,6 +141,19 @@ META
   fi
 }
 
+# Create nginx config based on site type
+# 
+# Parameters:
+#   $1: Domains (comma separated)
+#   $2: Root path
+#   $3: Site type (static, php, laravel, nodejs)
+#   $4: Config file path
+#
+# Returns:
+#   None
+#
+# Example:
+#   create_nginx_config "example.com" "/var/www/example" "static" "/etc/nginx/sites-enabled/example.conf"
 create_nginx_config() {
   log_action "INFO" "Creating nginx config"
   local domains="$(echo "$1" | tr ',' ' ')"
@@ -208,6 +239,18 @@ EOF
   esac
 }
 
+# Edit project configuration
+#
+# This function provides a menu for editing project configuration.
+# The menu options are:
+#   1. Domain
+#   2. Root Path
+#   3. Site Type
+#   0. Batal
+#
+# The selected option will be edited, and the new value will be saved to
+# the project metadata file and the nginx configuration file. The result of
+# the action will be displayed in a message box.
 edit_project() {
   log_action "INFO" "Editing project"
   # Pilih project untuk diedit
@@ -281,6 +324,13 @@ META
   fi
 }
 
+# Delete a project and its associated nginx configuration.
+#
+# This function provides a menu for deleting projects, and then
+# deletes the selected project and its associated nginx
+# configuration. It will then reload nginx to apply the
+# changes. If the deletion fails, an error message will be
+# displayed.
 delete_project() {
   log_action "INFO" "Deleting project"
   options=()
@@ -314,6 +364,14 @@ delete_project() {
   fi
 }
 
+# Toggle the status of a project.
+#
+# This function provides a menu for toggling the status of
+# projects. The menu options are the available projects,
+# with their current status. The function will then toggle
+# the selected project's status, and reload nginx to
+# apply the changes. If the reload fails, an error
+# message will be displayed.
 toggle_project_status() {
   log_action "INFO" "Toggling project status"
   options=()
@@ -367,6 +425,28 @@ META
   fi
 }
 
+# Enable SSL for a website.
+#
+# This function will enable SSL for a website, allowing
+# HTTPS connections to be made to the website.
+#
+# The function will first display a list of all available
+# websites, and then prompt the user to select a website
+# to enable SSL for.
+#
+# The user will then be prompted to enter the path to the
+# SSL certificate and private key.
+#
+# If the paths are empty, the function will generate a
+# self-signed certificate.
+#
+# The function will then update the nginx configuration to
+# enable SSL for the website, and then test the
+# configuration. If the configuration is valid, the
+# function will reload the nginx service and display a
+# success message. If the configuration is invalid, the
+# function will restore the original configuration and
+# display an error message.
 enable_ssl() {
   log_action "INFO" "Enabling SSL"
   options=()

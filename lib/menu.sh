@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Menampilkan menu utama panel.
+# Pilihan menu:
+#   1. Manajemen Layanan
+#   2. Manajemen Webserver
+#   3. Manajemen MySQL
+#   4. Manajemen Redis
+#   5. Manajemen PostgreSQL
+#   6. Manajemen dnsmasq
+#   7. Informasi Sistem
+#   8. Aksi Cepat
+#   9. Atur Ulang Semua Konfigurasi
+#   0. Keluar
 main_menu() {
   log_action "INFO" "Open main menu"
   while true; do
@@ -33,7 +45,12 @@ main_menu() {
   done
 }
 
-# ========= QUICK ACTIONS =========
+# Membuka menu aksi cepat yang memungkinkan beberapa aksi yang sering
+# digunakan untuk mempercepat proses manajemen layanan, seperti
+# memulai, menghentikan, dan memuat ulang semua layanan,
+# memeriksa status layanan secara singkat, memuat ulang
+# konfigurasi semua layanan, dan mencadangkan konfigurasi
+# semua layanan.
 quick_actions() {
   log_action "INFO" "Open quick actions menu"
   while true; do

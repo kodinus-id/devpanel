@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Manage MySQL databases and users
+# This function provides a menu for managing MySQL databases and users.
+# It will ask for the root password, and then provide options to list
+# databases and users, create a new database, delete a database,
+# create a new user, delete a user, and grant privileges to a user
+# for a specific database.
 manage_mysql() {
   log_action "INFO" "Managing MySQL"
   while true; do

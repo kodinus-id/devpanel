@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Reset all configurations of the DevPanel program.
+# This function will reset all configurations of the webserver, dnsmasq, MySQL, PostgreSQL, and Redis.
+# It will ask for confirmation before starting the reset process.
+# The reset process includes:
+#   1. Removing all webserver configurations (nginx)
+#   2. Resetting dnsmasq to its default configuration
+#   3. Dropping all MySQL databases
+#   4. Dropping all PostgreSQL databases
+#   5. Flushing all Redis databases
 reset_all() {
   log_action "INFO" "Resetting all configurations"
   dialog --yesno "⚠️ PERINGATAN ⚠️\n\nIni akan menghapus SEMUA konfigurasi project, reset DNSMasq, dan menghapus semua database (MySQL, PostgreSQL, Redis).\n\nLANJUTKAN?" 15 60 || return
@@ -37,6 +46,12 @@ reset_all() {
   show_msg "Reset Selesai" "Semua konfigurasi webserver, dnsmasq, dan database berhasil direset."
 }
 
+# Quick status check
+#
+# This function checks the status of all services, disk space, and memory usage.
+# It will display a message with the status of each service, disk space, and memory usage.
+# If any of the services are not running, disk space is above 90%, or memory usage is above 90%, it will display a warning message.
+# Otherwise, it will display a success message.
 quick_status_check() {
   log_action "INFO" "Quick status check"
   services=($(get_service_names))
@@ -88,6 +103,14 @@ quick_status_check() {
   show_msg "Quick Status" "$STATUS_INFO"
 }
 
+# Reload all configurations of all services.
+# This function will reload the configurations of all services
+# that support reloading. It will show a message box with
+# the results of the reload operation.
+#
+# Parameters: None
+#
+# Returns: None
 reload_all_configs() {
   log_action "INFO" "Reloading all configs"
   services=($(get_service_names))
@@ -120,6 +143,15 @@ reload_all_configs() {
   show_msg "Reload Results" "$result_text"
 }
 
+# Backup all configurations of DevPanel to a directory
+# This function backs up all configurations of Devpanel to a directory.
+# The directory will contain the site configurations, nginx configurations,
+# and this info file.
+#
+# To restore:
+# 1. Stop services if needed
+# 2. Copy configurations back to their original locations
+# 3. Reload/restart services
 backup_configurations() {
   log_action "INFO" "Backing up configurations"
   backup_dir="$HOME/devpanel-backup-$(date +%Y%m%d_%H%M%S)"
@@ -165,6 +197,10 @@ BACKUP_INFO
   show_msg "Backup Complete" "Backup berhasil dibuat di:\n$backup_dir\n\nIsi backup:\n- Konfigurasi situs\n- Konfigurasi Nginx\n- Info backup"
 }
 
+# Menampilkan informasi tentang sistem yang sedang berjalan,
+# termasuk status layanan, jumlah situs web yang diaktifkan,
+# sumber daya sistem, direktori konfigurasi, dan informasi
+# tentang layanan dnsmasq.
 show_system_info() {
   log_action "INFO" "Showing system info"
   # Check service status dengan fallback yang lebih baik

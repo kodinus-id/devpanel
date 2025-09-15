@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Manage services menu
+# - Show all services status
+# - Start all services
+# - Stop all services
+# - Restart all services
+# - Enable all services (auto-start)
+# - Disable all services (manual-start)
+# - Manage individual services
 manage_services() {
   log_action "INFO" "Open service management menu"
   while true; do
@@ -43,6 +51,16 @@ manage_services() {
   done
 }
 
+# Mengembalikan nama layanan yang tersedia untuk dikelola.
+# Fungsi ini akan mengembalikan nama layanan yang tersedia
+# untuk dikelola. Nama layanan yang tidak tersedia akan
+# diabaikan.
+#
+# Contoh:
+#   services=($(get_service_names))
+#   for service in "${services[@]}"; do
+#     echo "$service"
+#   done
 get_service_names() {
   log_action "INFO" "Fetching service names"
   # Definisi layanan yang akan dikelola
@@ -66,6 +84,10 @@ get_service_names() {
   echo "${available_services[@]}"
 }
 
+# Menampilkan status semua layanan yang tersedia.
+# Fungsi ini akan menampilkan status dari setiap layanan
+# yang tersedia, termasuk status aktif dan status
+# boot-nya.
 show_all_services_status() {
   log_action "INFO" "Show all services status"
   services=($(get_service_names))
@@ -98,6 +120,12 @@ show_all_services_status() {
   show_msg "Status Layanan" "$STATUS_INFO"
 }
 
+# Start all available services.
+# 
+# This function starts all available services. It prompts the user to confirm
+# the action, and then iterates over all available services and attempts to
+# start each one. The result of each attempt is stored in a list, and
+# then displayed to the user in a message box.
 start_all_services() {
   log_action "INFO" "Starting all services"
   services=($(get_service_names))
@@ -117,6 +145,12 @@ start_all_services() {
   show_msg "Hasil Start Layanan" "$result_text"
 }
 
+# Stop all available services.
+# 
+# This function stops all available services. It prompts the user to confirm
+# the action, and then iterates over all available services and attempts to
+# stop each one. The result of each attempt is stored in a list, and
+# then displayed to the user in a message box.
 stop_all_services() {
   log_action "INFO" "Stopping all services"
   services=($(get_service_names))
@@ -138,6 +172,12 @@ stop_all_services() {
   show_msg "Hasil Stop Layanan" "$result_text"
 }
 
+# Restart all available services.
+# 
+# This function restarts all available services. It prompts the user to confirm
+# the action, and then iterates over all available services and attempts to
+# restart each one. The result of each attempt is stored in a list, and
+# then displayed to the user in a message box.
 restart_all_services() {
   log_action "INFO" "Restarting all services"
   services=($(get_service_names))
@@ -157,6 +197,12 @@ restart_all_services() {
   show_msg "Hasil Restart Layanan" "$result_text"
 }
 
+# Enable all available services.
+# 
+# This function enables all available services. It prompts the user to confirm
+# the action, and then iterates over all available services and attempts to
+# enable each one. The result of each attempt is stored in a list, and
+# then displayed to the user in a message box.
 enable_all_services() {
   log_action "INFO" "Enabling all services"
   services=($(get_service_names))
@@ -176,6 +222,12 @@ enable_all_services() {
   show_msg "Hasil Enable Layanan" "$result_text"
 }
 
+# Disable all available services.
+#
+# This function disables all available services. It prompts the user to confirm
+# the action, and then iterates over all available services and attempts to
+# disable each one. The result of each attempt is stored in a list, and
+# then displayed to the user in a message box.
 disable_all_services() {
   log_action "INFO" "Disabling all services"
   services=($(get_service_names))
@@ -197,6 +249,24 @@ disable_all_services() {
   show_msg "Hasil Disable Layanan" "$result_text"
 }
 
+# Manage individual services.
+#
+# This function provides a menu for managing individual services.
+# The menu options are:
+#   1. Start service
+#   2. Stop service
+#   3. Restart service
+#   4. Reload service
+#   5. Enable (Auto-start)
+#   6. Disable (Manual-start)
+#   7. Status Detail
+#   0. Kembali
+#
+# The function will display a list of available services, and then prompt
+# the user to select a service to manage. Once a service is selected,
+# the function will display a menu with the above options, and then perform
+# the selected action. The result of the action will be displayed in a
+# message box.
 manage_individual_services() {
   log_action "INFO" "Manage individual service"
   services=($(get_service_names))
