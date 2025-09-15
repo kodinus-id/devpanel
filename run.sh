@@ -10,5 +10,7 @@ source "$SCRIPT_DIR/lib/databases.sh"
 source "$SCRIPT_DIR/lib/system.sh"
 source "$SCRIPT_DIR/lib/menu.sh"
 
+trap exit_panel INT
+
 check_dependencies
 main_menu

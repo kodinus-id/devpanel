@@ -16,7 +16,7 @@ main_menu() {
       0 "Keluar" \
       3>&1 1>&2 2>&3)
 
-    [ $? -ne 0 ] && exit
+    [ $? -ne 0 ] && exit_panel
 
     case $MAIN_CHOICE in
       1) manage_services ;;
@@ -28,7 +28,7 @@ main_menu() {
       7) show_system_info ;;
       8) quick_actions ;;
       9) reset_all ;;
-      0) clear; echo "Terima kasih telah menggunakan Dev Panel!"; exit 0 ;;
+      0) exit_panel ;;
     esac
   done
 }

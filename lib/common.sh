@@ -41,3 +41,10 @@ check_dependencies() {
   fi
 }
 
+exit_panel() {
+  clear
+  echo "[DevPanel] Berhasil memberhentikan layanan."
+  echo "[DevPanel] Sampai jumpa kembali dilain waktu!"
+  exit 0
+}
+
