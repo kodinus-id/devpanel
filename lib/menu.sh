@@ -38,12 +38,12 @@ quick_actions() {
   log_action "INFO" "Open quick actions menu"
   while true; do
     CHOICE=$(dialog --clear --title "Quick Actions" --menu "Aksi cepat:" 18 60 8 \
-      1 "🟢 Start All Services" \
-      2 "🔴 Stop All Services" \
-      3 "🔄 Restart All Services" \
-      4 "📊 Quick Status Check" \
-      5 "🔧 Reload All Configs" \
-      6 "💾 Backup Configurations" \
+      1 "Jalankan Semua Layanan" \
+      2 "Berhentikan Semua Layanan" \
+      3 "Muat ulang Semua Layanan" \
+      4 "Pemeriksa Status Layanan Secara Singkat" \
+      5 "Muat Ulang Semua Konfigurasi" \
+      6 "Cadangkan Semua Konfigurasi" \
       0 "Kembali" \
       3>&1 1>&2 2>&3)
 
