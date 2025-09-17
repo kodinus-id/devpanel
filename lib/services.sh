@@ -84,6 +84,88 @@ get_service_names() {
   echo "${available_services[@]}"
 }
 
+# Resolve actual systemd unit names for known services.
+# Returns 0 and prints the unit name (without .service suffix) when found,
+# otherwise returns 1.
+resolve_service_unit() {
+  local base="$1"
+
+  case "$base" in
+    nginx)
+      echo "nginx"
+      return 0
+      ;;
+    mysql)
+      if systemctl list-unit-files mysql.service >/dev/null 2>&1; then
+        echo "mysql"
+        return 0
+      elif systemctl list-unit-files mariadb.service >/dev/null 2>&1; then
+        echo "mariadb"
+        return 0
+      fi
+      ;;
+    redis)
+      if systemctl list-unit-files redis.service >/dev/null 2>&1; then
+        echo "redis"
+        return 0
+      elif systemctl list-unit-files redis-server.service >/dev/null 2>&1; then
+        echo "redis-server"
+        return 0
+      fi
+      ;;
+    postgresql)
+      if systemctl list-unit-files postgresql.service >/dev/null 2>&1; then
+        echo "postgresql"
+        return 0
+      else
+        local pg_service
+        pg_service=$(systemctl list-unit-files "postgresql@*.service" 2>/dev/null | awk 'NR>1 {print $1}' | head -n1)
+        if [[ -n "$pg_service" ]]; then
+          echo "${pg_service%.service}"
+          return 0
+        fi
+      fi
+      ;;
+  esac
+
+  if systemctl list-unit-files "$base.service" >/dev/null 2>&1; then
+    echo "$base"
+    return 0
+  fi
+
+  return 1
+}
+
+# Helper to run systemctl action for a service and show dialog feedback.
+perform_service_action() {
+  local base="$1"
+  local systemctl_action="$2"
+  local action_desc="$3"
+
+  local service_unit
+  if ! service_unit=$(resolve_service_unit "$base"); then
+    show_msg "Error" "Layanan $base tidak ditemukan di sistem."
+    return 1
+  fi
+
+  if sudo systemctl "$systemctl_action" "$service_unit" 2>/dev/null; then
+    show_msg "Berhasil" "Layanan $service_unit berhasil $action_desc."
+    return 0
+  else
+    show_msg "Error" "Gagal $action_desc layanan $service_unit."
+    return 1
+  fi
+}
+
+# Public helpers for common service actions.
+service_reload() {
+  perform_service_action "$1" "reload" "direload"
+}
+
+service_restart() {
+  perform_service_action "$1" "restart" "direstart"
+}
+
 # Menampilkan status semua layanan yang tersedia.
 # Fungsi ini akan menampilkan status dari setiap layanan
 # yang tersedia, termasuk status aktif dan status
