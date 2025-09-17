@@ -9,13 +9,15 @@
 manage_mysql() {
   log_action "INFO" "Managing MySQL"
   while true; do
-    CHOICE=$(dialog --clear --title "Manajemen MySQL" --menu "Pilih aksi:" 20 70 10 \
+    CHOICE=$(dialog --clear --title "Manajemen MySQL" --menu "Pilih aksi:" 20 70 12 \
       1 "Daftar Database & User" \
       2 "Tambah Database" \
       3 "Hapus Database" \
       4 "Tambah User" \
       5 "Hapus User" \
       6 "Grant Privileges" \
+      7 "Reload Layanan MySQL" \
+      8 "Restart Layanan MySQL" \
       0 "Kembali" \
       3>&1 1>&2 2>&3)
 
@@ -85,6 +87,12 @@ manage_mysql() {
           show_msg "Error" "Gagal memberikan privileges."
         fi
         ;;
+      7)
+        service_reload "mysql"
+        ;;
+      8)
+        service_restart "mysql"
+        ;;
       0) break ;;
     esac
   done
@@ -94,11 +102,13 @@ manage_mysql() {
 manage_redis() {
   log_action "INFO" "Managing Redis"
   while true; do
-    CHOICE=$(dialog --clear --title "Manajemen Redis" --menu "Pilih aksi:" 15 60 6 \
+    CHOICE=$(dialog --clear --title "Manajemen Redis" --menu "Pilih aksi:" 15 60 8 \
       1 "Info Database" \
       2 "Flush Semua Database" \
       3 "Flush Database Aktif" \
       4 "Monitor Redis" \
+      5 "Reload Layanan Redis" \
+      6 "Restart Layanan Redis" \
       0 "Kembali" \
       3>&1 1>&2 2>&3)
 
@@ -124,6 +134,12 @@ manage_redis() {
         clear
         redis-cli MONITOR
         ;;
+      5)
+        service_reload "redis"
+        ;;
+      6)
+        service_restart "redis"
+        ;;
       0) break ;;
     esac
   done
@@ -133,13 +149,15 @@ manage_redis() {
 manage_postgres() {
   log_action "INFO" "Managing PostgreSQL"
   while true; do
-    CHOICE=$(dialog --clear --title "Manajemen PostgreSQL" --menu "Pilih aksi:" 20 70 10 \
+    CHOICE=$(dialog --clear --title "Manajemen PostgreSQL" --menu "Pilih aksi:" 20 70 12 \
       1 "Daftar Database & User" \
       2 "Tambah Database" \
       3 "Hapus Database" \
       4 "Tambah User" \
       5 "Hapus User" \
       6 "Grant Privileges" \
+      7 "Reload Layanan PostgreSQL" \
+      8 "Restart Layanan PostgreSQL" \
       0 "Kembali" \
       3>&1 1>&2 2>&3)
 
@@ -200,7 +218,7 @@ manage_postgres() {
           show_msg "Error" "Gagal menghapus user $user."
         fi
         ;;
-      6) 
+      6)
         db=$(dialog --inputbox "Nama Database:" 10 50 3>&1 1>&2 2>&3) || continue
         user=$(dialog --inputbox "Username:" 10 50 3>&1 1>&2 2>&3) || continue
         if sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $db TO $user;" 2>/dev/null; then
@@ -208,6 +226,12 @@ manage_postgres() {
         else
           show_msg "Error" "Gagal memberikan privileges."
         fi
+        ;;
+      7)
+        service_reload "postgresql"
+        ;;
+      8)
+        service_restart "postgresql"
         ;;
       0) break ;;
     esac

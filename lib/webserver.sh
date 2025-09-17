@@ -23,6 +23,8 @@ manage_webserver() {
       4 "Hapus Proyek" \
       5 "Enable SSL" \
       6 "Toggle Status" \
+      7 "Reload Nginx" \
+      8 "Restart Nginx" \
       0 "Kembali" \
       3>&1 1>&2 2>&3)
 
@@ -47,16 +49,51 @@ manage_webserver() {
       6)
         toggle_project_status
         ;;
+      7)
+        service_reload "nginx"
+        ;;
+      8)
+        service_restart "nginx"
+        ;;
       0) break ;;
     esac
   done
+}
+
+# Format proxy input into a full URL (defaulting to http://localhost:<port>).
+format_proxy_url() {
+  local input="$1"
+  input="$(echo "$input" | xargs)"
+
+  if [[ -z "$input" ]]; then
+    echo ""
+    return 1
+  fi
+
+  if [[ "$input" =~ ^[0-9]+$ ]]; then
+    echo "http://localhost:$input"
+    return 0
+  fi
+
+  if [[ "$input" == http://* || "$input" == https://* || "$input" == ws://* || "$input" == wss://* ]]; then
+    echo "$input"
+    return 0
+  fi
+
+  if [[ "$input" == *"://"* ]]; then
+    echo "$input"
+    return 0
+  fi
+
+  echo "http://${input#http://}"
+  return 0
 }
 
 # List all projects with their status, domain, type, root, and SSL status
 # Format: [STATUS] DOMAIN | TYPE | ROOT | SSL
 list_projects() {
   log_action "INFO" "Listing projects"
-  RESULT="FORMAT: [STATUS] DOMAIN | TYPE | ROOT | SSL\n"
+  RESULT="FORMAT: [STATUS] DOMAIN | TYPE | ROOT/PROXY | SSL\n"
   RESULT+="-------------------------------------------------\n"
   
   if [ ! "$(ls -A "$SITEDB"/*.site 2>/dev/null)" ]; then
@@ -85,9 +122,21 @@ list_projects() {
       SSL_STATUS="Yes"
     fi
     
-    RESULT+="\n$STATUS_SYMBOL $DOMAIN | $SITE_TYPE | $ROOT | SSL: $SSL_STATUS"
+    PROXY_URL="${PROXY_URL:-}"
+    local location_info
+    if [[ -n "$PROXY_URL" ]]; then
+      if [[ -n "$ROOT" ]]; then
+        location_info="$ROOT | Proxy: $PROXY_URL"
+      else
+        location_info="Proxy: $PROXY_URL"
+      fi
+    else
+      location_info="${ROOT:- -}"
+    fi
+
+    RESULT+="\n$STATUS_SYMBOL $DOMAIN | $SITE_TYPE | $location_info | SSL: $SSL_STATUS"
   done
-  
+
   show_msg "Daftar Proyek" "$RESULT"
 }
 
@@ -98,30 +147,55 @@ add_project() {
   log_action "INFO" "Adding project"
   # Input domain
   domains=$(dialog --inputbox "Masukkan domain (pisahkan dengan koma jika multiple):" 10 70 3>&1 1>&2 2>&3) || return
-  
-  # Input root path
-  root=$(dialog --inputbox "Path root project:" 10 70 3>&1 1>&2 2>&3) || return
-  
+
   # Pilih tipe site
-  site_type=$(dialog --clear --title "Tipe Website" --menu "Pilih tipe website:" 15 60 4 \
+  site_type=$(dialog --clear --title "Tipe Website" --menu "Pilih tipe website:" 15 60 6 \
     "static" "Static HTML/CSS/JS" \
     "php" "PHP Application" \
     "laravel" "Laravel Framework" \
     "nodejs" "Node.js Application" \
+    "proxy" "Proxy ke layanan lokal" \
     3>&1 1>&2 2>&3) || return
+
+  local root=""
+  local proxy_url=""
+
+  case "$site_type" in
+    "static"|"php"|"laravel")
+      root=$(dialog --inputbox "Path root project:" 10 70 3>&1 1>&2 2>&3) || return
+      ;;
+    "nodejs")
+      root=$(dialog --inputbox "Path root project (boleh dikosongkan):" 10 70 3>&1 1>&2 2>&3) || return
+      local node_proxy_input
+      node_proxy_input=$(dialog --inputbox "Port/alamat lokal Node.js (contoh: 3000):" 10 70 "3000" 3>&1 1>&2 2>&3) || return
+      if ! proxy_url=$(format_proxy_url "$node_proxy_input"); then
+        show_msg "Error" "Alamat proxy lokal tidak boleh kosong."
+        return
+      fi
+      ;;
+    "proxy")
+      local proxy_input
+      proxy_input=$(dialog --inputbox "Alamat layanan lokal (contoh: http://localhost:3000 atau 5173):" 10 70 "http://localhost:3000" 3>&1 1>&2 2>&3) || return
+      if ! proxy_url=$(format_proxy_url "$proxy_input"); then
+        show_msg "Error" "Alamat proxy lokal tidak boleh kosong."
+        return
+      fi
+      ;;
+  esac
 
   # Generate ID dari domain
   id=$(hash_id "$domains")
   cfg="/etc/nginx/conf.d/$id.conf"
 
   # Buat konfigurasi nginx berdasarkan tipe
-  create_nginx_config "$domains" "$root" "$site_type" "$cfg"
+  create_nginx_config "$domains" "$root" "$site_type" "$cfg" "$proxy_url"
 
   # Simpan metadata
   cat <<META > "$SITEDB/$id.site"
 DOMAIN="$domains"
 ROOT="$root"
 SITE_TYPE="$site_type"
+PROXY_URL="$proxy_url"
 SSL=0
 STATUS="enabled"
 CREATED=$(date '+%Y-%m-%d %H:%M:%S')
@@ -146,8 +220,9 @@ META
 # Parameters:
 #   $1: Domains (comma separated)
 #   $2: Root path
-#   $3: Site type (static, php, laravel, nodejs)
+#   $3: Site type (static, php, laravel, nodejs, proxy)
 #   $4: Config file path
+#   $5: Proxy URL (optional, used for nodejs/proxy)
 #
 # Returns:
 #   None
@@ -157,9 +232,10 @@ META
 create_nginx_config() {
   log_action "INFO" "Creating nginx config"
   local domains="$(echo "$1" | tr ',' ' ')"
-  local root="$2" 
+  local root="$2"
   local site_type="$3"
   local cfg="$4"
+  local proxy_url="$5"
   
   case "$site_type" in
     "static")
@@ -216,14 +292,15 @@ server {
 }
 EOF
       ;;
-    "nodejs")
+    "nodejs"|"proxy")
+      local target="${proxy_url:-http://localhost:3000}"
       cat <<EOF | sudo tee "$cfg" >/dev/null
 server {
     listen 80;
     server_name $domains;
-    
+
     location / {
-        proxy_pass http://localhost:3000;  # Default Node.js port
+        proxy_pass $target;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -271,15 +348,22 @@ edit_project() {
   
   # Load current data
   . "$SITEDB/$site.site"
-  
-  # Edit options
-  EDIT_CHOICE=$(dialog --clear --title "Edit Proyek: $DOMAIN" --menu "Pilih yang akan diedit:" 15 60 5 \
-    1 "Domain" \
-    2 "Root Path" \
-    3 "Site Type" \
-    0 "Batal" \
-    3>&1 1>&2 2>&3) || return
-    
+  PROXY_URL="${PROXY_URL:-}"
+
+  local edit_options=(
+    1 "Domain"
+    2 "Root Path"
+    3 "Site Type"
+  )
+  local menu_size=5
+  if [[ "$SITE_TYPE" == "nodejs" || "$SITE_TYPE" == "proxy" || -n "$PROXY_URL" ]]; then
+    edit_options+=(4 "Proxy Lokal (localhost:<port>)")
+    menu_size=6
+  fi
+  edit_options+=(0 "Batal")
+
+  EDIT_CHOICE=$(dialog --clear --title "Edit Proyek: $DOMAIN" --menu "Pilih yang akan diedit:" 15 60 $menu_size "${edit_options[@]}" 3>&1 1>&2 2>&3) || return
+
   case $EDIT_CHOICE in
     1)
       new_domains=$(dialog --inputbox "Domain baru:" 10 70 "$DOMAIN" 3>&1 1>&2 2>&3) || return
@@ -290,26 +374,65 @@ edit_project() {
       ROOT="$new_root"
       ;;
     3)
-      new_type=$(dialog --clear --title "Tipe Website Baru" --menu "Pilih tipe:" 15 60 4 \
+      new_type=$(dialog --clear --title "Tipe Website Baru" --menu "Pilih tipe:" 15 60 5 \
         "static" "Static HTML/CSS/JS" \
         "php" "PHP Application" \
         "laravel" "Laravel Framework" \
         "nodejs" "Node.js Application" \
+        "proxy" "Proxy ke layanan lokal" \
         3>&1 1>&2 2>&3) || return
       SITE_TYPE="$new_type"
+      case "$SITE_TYPE" in
+        "static"|"php"|"laravel")
+          ROOT=$(dialog --inputbox "Root path baru:" 10 70 "$ROOT" 3>&1 1>&2 2>&3) || return
+          PROXY_URL=""
+          ;;
+        "nodejs")
+          ROOT=$(dialog --inputbox "Path root project (boleh dikosongkan):" 10 70 "$ROOT" 3>&1 1>&2 2>&3) || return
+          local proxy_choice
+          proxy_choice=$(dialog --inputbox "Port/alamat lokal Node.js (contoh: 3000):" 10 70 "${PROXY_URL:-3000}" 3>&1 1>&2 2>&3) || return
+          if ! PROXY_URL=$(format_proxy_url "$proxy_choice"); then
+            show_msg "Error" "Alamat proxy lokal tidak boleh kosong."
+            return
+          fi
+          ;;
+        "proxy")
+          local proxy_choice
+          proxy_choice=$(dialog --inputbox "Alamat layanan lokal (contoh: http://localhost:3000 atau 5173):" 10 70 "${PROXY_URL:-http://localhost:3000}" 3>&1 1>&2 2>&3) || return
+          if ! PROXY_URL=$(format_proxy_url "$proxy_choice"); then
+            show_msg "Error" "Alamat proxy lokal tidak boleh kosong."
+            return
+          fi
+          ;;
+      esac
+      ;;
+    4)
+      local proxy_prompt="Alamat layanan lokal (contoh: http://localhost:3000 atau 5173):"
+      local default_proxy="${PROXY_URL:-http://localhost:3000}"
+      if [[ "$SITE_TYPE" == "nodejs" ]]; then
+        proxy_prompt="Port/alamat lokal Node.js (contoh: 3000):"
+        default_proxy="${PROXY_URL:-3000}"
+      fi
+      local proxy_choice
+      proxy_choice=$(dialog --inputbox "$proxy_prompt" 10 70 "$default_proxy" 3>&1 1>&2 2>&3) || return
+      if ! PROXY_URL=$(format_proxy_url "$proxy_choice"); then
+        show_msg "Error" "Alamat proxy lokal tidak boleh kosong."
+        return
+      fi
       ;;
     0) return ;;
   esac
-  
+
   # Update nginx config
   cfg="/etc/nginx/conf.d/$site.conf"
-  create_nginx_config "$DOMAIN" "$ROOT" "$SITE_TYPE" "$cfg"
-  
+  create_nginx_config "$DOMAIN" "$ROOT" "$SITE_TYPE" "$cfg" "$PROXY_URL"
+
   # Update metadata
   cat <<META > "$SITEDB/$site.site"
 DOMAIN="$DOMAIN"
 ROOT="$ROOT"
 SITE_TYPE="$SITE_TYPE"
+PROXY_URL="$PROXY_URL"
 SSL=$SSL
 STATUS="$STATUS"
 CREATED="$CREATED"
@@ -394,7 +517,8 @@ toggle_project_status() {
   
   # Load current data
   . "$SITEDB/$site.site"
-  
+  PROXY_URL="${PROXY_URL:-}"
+
   if [[ "$STATUS" == "enabled" ]]; then
     # Disable site
     sudo rm -f "/etc/nginx/sites-enabled/$site.conf"
@@ -412,6 +536,7 @@ toggle_project_status() {
 DOMAIN="$DOMAIN"
 ROOT="$ROOT"
 SITE_TYPE="$SITE_TYPE"
+PROXY_URL="$PROXY_URL"
 SSL=$SSL
 STATUS="$new_status"
 CREATED="$CREATED"
@@ -468,6 +593,7 @@ enable_ssl() {
   
   site=$(dialog --menu "Pilih proyek untuk SSL:" 20 70 10 "${options[@]}" 3>&1 1>&2 2>&3) || return
   . "$SITEDB/$site.site"
+  PROXY_URL="${PROXY_URL:-}"
 
   crt=$(dialog --inputbox "Path SSL certificate (.crt/.pem):" 10 70 3>&1 1>&2 2>&3)
   key=$(dialog --inputbox "Path SSL private key (.key):" 10 70 3>&1 1>&2 2>&3)
@@ -505,6 +631,7 @@ enable_ssl() {
 DOMAIN="$DOMAIN"
 ROOT="$ROOT"
 SITE_TYPE="$SITE_TYPE"
+PROXY_URL="$PROXY_URL"
 SSL=1
 SSL_CRT="$crt"
 SSL_KEY="$key"
